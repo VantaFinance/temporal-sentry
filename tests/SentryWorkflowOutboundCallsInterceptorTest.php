@@ -12,6 +12,7 @@ use function PHPUnit\Framework\assertIsBool;
 use function PHPUnit\Framework\assertTrue;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use React\Promise\PromiseInterface as Promise;
@@ -19,6 +20,7 @@ use React\Promise\PromiseInterface as Promise;
 use function React\Promise\resolve;
 
 use ReflectionException;
+
 use RuntimeException;
 use Sentry\ClientInterface as SentryClient;
 use Sentry\Event;
@@ -28,18 +30,19 @@ use Sentry\EventId;
 use function Sentry\init;
 
 use Sentry\Integration\IntegrationInterface;
+
 use Sentry\Options;
 use Sentry\SentrySdk;
-
 use Sentry\Serializer\RepresentationSerializer;
 
 use Sentry\Severity;
+
 use Sentry\StacktraceBuilder;
-
-
 use Sentry\State\Scope;
 
+
 use Sentry\Transport\Result;
+
 use Sentry\Transport\ResultStatus;
 use Spiral\Attributes\AttributeReader;
 use stdClass;
@@ -48,6 +51,7 @@ use Temporal\Exception\ExceptionInterceptor;
 use Temporal\Interceptor\SimplePipelineProvider;
 use Temporal\Interceptor\WorkflowOutboundCalls\CompleteInput;
 use Temporal\Interceptor\WorkflowOutboundCalls\PanicInput;
+use Temporal\Internal\Declaration\Destroyable;
 use Temporal\Internal\Declaration\WorkflowInstanceInterface as WorkflowInstance;
 use Temporal\Internal\Marshaller\Mapper\AttributeMapperFactory;
 use Temporal\Internal\Marshaller\Marshaller;
@@ -228,7 +232,7 @@ final class SentryWorkflowOutboundCallsInterceptorTest extends TestCase
 }
 
 
-final class NullWorkflowInstance implements WorkflowInstance
+final class NullWorkflowInstance implements WorkflowInstance, Destroyable
 {
     public function getHandler(): callable
     {
@@ -268,5 +272,10 @@ final class NullWorkflowInstance implements WorkflowInstance
     public function clearSignalQueue(): void
     {
         // TODO: Implement clearSignalQueue() method.
+    }
+
+    public function destroy(): void
+    {
+        // TODO: Implement destroy() method.
     }
 }
