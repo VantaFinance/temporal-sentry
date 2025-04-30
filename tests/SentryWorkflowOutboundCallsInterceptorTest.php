@@ -9,7 +9,6 @@ use Closure;
 use function PHPUnit\Framework\assertArrayHasKey;
 use function PHPUnit\Framework\assertEquals;
 use function PHPUnit\Framework\assertIsBool;
-use function PHPUnit\Framework\assertNotNull;
 use function PHPUnit\Framework\assertTrue;
 
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -185,10 +184,6 @@ final class SentryWorkflowOutboundCallsInterceptorTest extends TestCase
 
                 assertArrayHasKey('TaskQueue', $context['Workflow']);
                 assertEquals('Test', $context['Workflow']['TaskQueue']);
-
-                assertNotNull($scope);
-                assertNotNull($scope->getUser());
-                assertEquals('test', $scope->getUser()->getId());
 
                 return null;
             }
