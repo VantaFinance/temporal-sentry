@@ -1,33 +1,22 @@
 <?php
 
-/**
- * Temporal Sentry
- *
- * @author Vlad Shashkov <v.shashkov@pos-credit.ru>
- * @copyright Copyright (c) 2024, The Vanta
- */
-
 declare(strict_types=1);
 
 namespace Vanta\Integration\Temporal\Sentry\Test;
 
+use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Exception;
+
 use function PHPUnit\Framework\assertArrayHasKey;
 use function PHPUnit\Framework\assertEquals;
-use function PHPUnit\Framework\assertIsBool;
-use function PHPUnit\Framework\assertNotNull;
-use function PHPUnit\Framework\assertNull;
-use function PHPUnit\Framework\assertTrue;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
+use ReflectionException;
 use Sentry\ClientInterface as SentryClient;
 use Sentry\Event;
 use Sentry\EventHint;
 use Sentry\EventId;
-
-use function Sentry\init;
-
 use Sentry\Integration\IntegrationInterface;
 use Sentry\Options;
 use Sentry\SentrySdk;
@@ -37,7 +26,6 @@ use Sentry\StacktraceBuilder;
 use Sentry\State\Scope;
 use Sentry\Transport\Result;
 use Sentry\Transport\ResultStatus;
-use Sentry\UserDataBag;
 use Spiral\Attributes\AttributeReader;
 use Temporal\Activity;
 use Temporal\Activity\ActivityInfo;
@@ -51,63 +39,17 @@ use Temporal\Internal\Marshaller\Mapper\AttributeMapperFactory;
 use Temporal\Internal\Marshaller\Marshaller;
 use Temporal\Worker\Transport\Goridge;
 use Throwable;
-use Vanta\Integration\Temporal\Sentry\SentryActivityInboundInterceptor;
+use Vanta\Integration\Temporal\Sentry\SentryDoctrineOpenTransactionInterceptor;
 
-#[CoversClass(SentryActivityInboundInterceptor::class)]
-final class SentryActivityInboundInterceptorTest extends TestCase
+#[CoversClass(SentryDoctrineOpenTransactionInterceptor::class)]
+final class SentryDoctrineOpenTransactionInterceptorTest extends TestCase
 {
     /**
-     * @throws Throwable
+     * @throws Exception
+     * @throws ReflectionException
      */
-    public function testSuccessHandle(): void
+    public function testCaptureOpenTransaction(): void
     {
-        init(['dsn' => 'https://1a36864711324ed8a04ba0fa2c89ac5a@sentry.temporal.local/52']);
-
-
-        Activity::setCurrentContext(
-            new ActivityContext(
-                Goridge::create(),
-                DataConverter::createDefault(),
-                EncodedValues::empty(),
-                Header::empty()
-            )
-        );
-
-
-        $hub         = SentrySdk::getCurrentHub();
-        $client      = $hub->getClient() ?? throw new RuntimeException('Not Found client');
-        $interceptor = new SentryActivityInboundInterceptor($hub, $client->getStacktraceBuilder());
-        $input       = new ActivityInput(EncodedValues::empty(), Header::empty());
-        $handler     = static function (ActivityInput $input) use ($hub): bool {
-            $hub->configureScope(function (Scope $scope): Scope {
-                return $scope->setUser(new UserDataBag('test'));
-            });
-
-            return true;
-        };
-
-        $result = $interceptor->handleActivityInbound($input, $handler);
-
-
-        $hub->configureScope(function (Scope $scope): void {
-            assertNull($scope->getUser());
-        });
-
-        assertIsBool($result);
-        assertTrue($result);
-    }
-
-
-    /**
-     * @throws Throwable
-     */
-    public function testHandleThrowable(): void
-    {
-        $throwable = new RuntimeException('Oops!');
-
-        $this->expectExceptionObject($throwable);
-
-
         $client = new class() implements SentryClient {
             private readonly Options $options;
             private readonly StacktraceBuilder $stacktraceBuilder;
@@ -148,6 +90,9 @@ final class SentryActivityInboundInterceptorTest extends TestCase
                 $extra   = $event->getExtra();
                 $context = $event->getContexts();
 
+                assertEquals('A activity opened a transaction but did not close it.', $event->getMessage());
+                assertEquals(Severity::error(), $event->getLevel());
+
                 assertArrayHasKey('Args', $extra);
                 assertArrayHasKey('Headers', $extra);
 
@@ -172,9 +117,6 @@ final class SentryActivityInboundInterceptorTest extends TestCase
                 assertArrayHasKey('TaskQueue', $context['Activity']);
                 assertEquals('Test', $context['Activity']['TaskQueue']);
 
-                assertNotNull($scope);
-                assertNotNull($scope->getUser());
-                assertEquals('test', $scope->getUser()->getId());
 
                 return null;
             }
@@ -194,6 +136,29 @@ final class SentryActivityInboundInterceptorTest extends TestCase
                 return $this->stacktraceBuilder;
             }
         };
+
+
+        $connection = new class() extends Connection {
+            private int $txLevel;
+
+            public function __construct()
+            {
+                $this->txLevel = 0;
+            }
+
+
+            public function beginTransaction(): void
+            {
+                $this->txLevel++;
+            }
+
+            public function getTransactionNestingLevel(): int
+            {
+                return $this->txLevel;
+            }
+        };
+
+
 
         $hub = SentrySdk::init();
 
@@ -262,25 +227,13 @@ final class SentryActivityInboundInterceptorTest extends TestCase
             },
         );
 
-        $interceptor = new SentryActivityInboundInterceptor($hub, $client->getStacktraceBuilder());
+        $interceptor = new SentryDoctrineOpenTransactionInterceptor($hub, $connection);
         $input       = new ActivityInput(EncodedValues::empty(), Header::empty());
-        $handler     = static function (ActivityInput $input) use ($throwable, $hub): bool {
-
-            $hub->configureScope(function (Scope $scope): Scope {
-                return $scope->setUser(new UserDataBag('test'));
-            });
-
-            throw $throwable;
+        $handler     = static function (ActivityInput $input) use ($connection): void {
+            $connection->beginTransaction();
         };
 
-        try {
-            $interceptor->handleActivityInbound($input, $handler);
-        } catch (Throwable $e) {
-            $hub->configureScope(function (Scope $scope): void {
-                assertNull($scope->getUser());
-            });
 
-            throw $e;
-        }
+        $interceptor->handleActivityInbound($input, $handler);
     }
 }

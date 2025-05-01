@@ -12,7 +12,6 @@ use function PHPUnit\Framework\assertIsBool;
 use function PHPUnit\Framework\assertTrue;
 
 use PHPUnit\Framework\Attributes\CoversClass;
-
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use React\Promise\PromiseInterface as Promise;
@@ -20,7 +19,6 @@ use React\Promise\PromiseInterface as Promise;
 use function React\Promise\resolve;
 
 use ReflectionException;
-
 use RuntimeException;
 use Sentry\ClientInterface as SentryClient;
 use Sentry\Event;
@@ -30,19 +28,13 @@ use Sentry\EventId;
 use function Sentry\init;
 
 use Sentry\Integration\IntegrationInterface;
-
 use Sentry\Options;
 use Sentry\SentrySdk;
 use Sentry\Serializer\RepresentationSerializer;
-
 use Sentry\Severity;
-
 use Sentry\StacktraceBuilder;
 use Sentry\State\Scope;
-
-
 use Sentry\Transport\Result;
-
 use Sentry\Transport\ResultStatus;
 use Spiral\Attributes\AttributeReader;
 use stdClass;
@@ -52,6 +44,8 @@ use Temporal\Interceptor\SimplePipelineProvider;
 use Temporal\Interceptor\WorkflowOutboundCalls\CompleteInput;
 use Temporal\Interceptor\WorkflowOutboundCalls\PanicInput;
 use Temporal\Internal\Declaration\Destroyable;
+use Temporal\Internal\Declaration\MethodHandler;
+use Temporal\Internal\Declaration\Prototype\WorkflowPrototype;
 use Temporal\Internal\Declaration\WorkflowInstanceInterface as WorkflowInstance;
 use Temporal\Internal\Marshaller\Mapper\AttributeMapperFactory;
 use Temporal\Internal\Marshaller\Marshaller;
@@ -234,12 +228,11 @@ final class SentryWorkflowOutboundCallsInterceptorTest extends TestCase
 
 final class NullWorkflowInstance implements WorkflowInstance, Destroyable
 {
-    public function getHandler(): callable
+    public function getHandler(): MethodHandler
     {
-        return static fn (): bool => false;
     }
 
-    public function getContext(): ?object
+    public function getContext(): object
     {
         return new stdClass();
     }
@@ -277,5 +270,30 @@ final class NullWorkflowInstance implements WorkflowInstance, Destroyable
     public function destroy(): void
     {
         // TODO: Implement destroy() method.
+    }
+
+    public function addUpdateHandler(string $name, callable $handler): void
+    {
+        // TODO: Implement addUpdateHandler() method.
+    }
+
+    public function findUpdateHandler(string $name): ?Closure
+    {
+        // TODO: Implement findUpdateHandler() method.
+    }
+
+    public function init(array $arguments = []): void
+    {
+        // TODO: Implement init() method.
+    }
+
+    public function addValidateUpdateHandler(string $name, callable $handler): void
+    {
+        // TODO: Implement addValidateUpdateHandler() method.
+    }
+
+    public function getPrototype(): WorkflowPrototype
+    {
+        // TODO: Implement getPrototype() method.
     }
 }

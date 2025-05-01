@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Temporal Sentry
  *
@@ -33,32 +34,42 @@ final class SentryWorkflowOutboundCallsInterceptor implements WorkflowOutboundCa
     ) {
     }
 
-
     public function panic(PanicInput $input, callable $next): Promise
     {
+        $this->hub->pushScope();
+
         $failure = $input->failure;
 
-        if ($failure == null) {
+        try {
+            if ($failure == null) {
+                return $next($input);
+            }
+
+            $this->reportError($failure);
+
             return $next($input);
+        } finally {
+            $this->hub->popScope();
         }
-
-        $this->reportError($failure);
-
-        return $next($input);
     }
-
 
     public function complete(CompleteInput $input, callable $next): Promise
     {
+        $this->hub->pushScope();
+
         $failure = $input->failure;
 
-        if ($failure == null) {
+        try {
+            if ($failure == null) {
+                return $next($input);
+            }
+
+            $this->reportError($failure);
+
             return $next($input);
+        } finally {
+            $this->hub->popScope();
         }
-
-        $this->reportError($failure);
-
-        return $next($input);
     }
 
     private function reportError(Throwable $e): void
