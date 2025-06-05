@@ -259,6 +259,11 @@ final class SentryActivityInboundInterceptorTest extends TestCase
                 {
                     $this->context->heartbeat($details);
                 }
+
+                public function getInstance(): object
+                {
+                    return $this;
+                }
             },
         );
 
