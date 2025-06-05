@@ -14,6 +14,7 @@ use function PHPUnit\Framework\assertTrue;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use React\Promise\PromiseInterface as Promise;
 
 use function React\Promise\resolve;
@@ -73,7 +74,12 @@ final class SentryWorkflowOutboundCallsInterceptorTest extends TestCase
 
         Workflow::setCurrentContext(
             new WorkflowContext(
-                ServiceContainer::fromWorkerFactory(WorkerFactory::create(), ExceptionInterceptor::createDefault(), new SimplePipelineProvider([])),
+                ServiceContainer::fromWorkerFactory(
+                    WorkerFactory::create(),
+                    ExceptionInterceptor::createDefault(),
+                    new SimplePipelineProvider([]),
+                    new NullLogger()
+                ),
                 new Client(new ArrayQueue()),
                 new NullWorkflowInstance(),
                 new Input()
@@ -123,7 +129,12 @@ final class SentryWorkflowOutboundCallsInterceptorTest extends TestCase
 
         Workflow::setCurrentContext(
             new WorkflowContext(
-                ServiceContainer::fromWorkerFactory(WorkerFactory::create(), ExceptionInterceptor::createDefault(), new SimplePipelineProvider([])),
+                ServiceContainer::fromWorkerFactory(
+                    WorkerFactory::create(),
+                    ExceptionInterceptor::createDefault(),
+                    new SimplePipelineProvider([]),
+                    new NullLogger()
+                ),
                 new Client(new ArrayQueue()),
                 new NullWorkflowInstance(),
                 new Input($workflowInfo, EncodedValues::fromValues([true, ['test' => 'test']]))
@@ -295,5 +306,20 @@ final class NullWorkflowInstance implements WorkflowInstance, Destroyable
     public function getPrototype(): WorkflowPrototype
     {
         // TODO: Implement getPrototype() method.
+    }
+
+    public function setDynamicSignalHandler(callable $handler): void
+    {
+        // TODO: Implement setDynamicSignalHandler() method.
+    }
+
+    public function setDynamicQueryHandler(callable $handler): void
+    {
+        // TODO: Implement setDynamicQueryHandler() method.
+    }
+
+    public function setDynamicUpdateHandler(callable $handler, ?callable $validator = null): void
+    {
+        // TODO: Implement setDynamicUpdateHandler() method.
     }
 }
