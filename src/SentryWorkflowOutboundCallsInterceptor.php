@@ -34,6 +34,16 @@ final class SentryWorkflowOutboundCallsInterceptor implements WorkflowOutboundCa
     ) {
     }
 
+
+    /**
+     * @template T
+     *
+     * @param callable(PanicInput): Promise<T> $next
+     *
+     * @throws Throwable
+     *
+     * @return Promise<T>
+     */
     public function panic(PanicInput $input, callable $next): Promise
     {
         $this->hub->pushScope();
@@ -57,6 +67,16 @@ final class SentryWorkflowOutboundCallsInterceptor implements WorkflowOutboundCa
         }
     }
 
+
+    /**
+     * @template T
+     *
+     * @param callable(CompleteInput): Promise<T> $next
+     *
+     * @throws Throwable
+     *
+     * @return Promise<T>
+     */
     public function complete(CompleteInput $input, callable $next): Promise
     {
         $this->hub->pushScope();
