@@ -14,6 +14,8 @@ namespace Vanta\Integration\Temporal\Sentry\Test;
 use function PHPUnit\Framework\assertArrayHasKey;
 use function PHPUnit\Framework\assertEquals;
 use function PHPUnit\Framework\assertIsBool;
+use function PHPUnit\Framework\assertNotNull;
+use function PHPUnit\Framework\assertNull;
 use function PHPUnit\Framework\assertTrue;
 
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -35,6 +37,7 @@ use Sentry\StacktraceBuilder;
 use Sentry\State\Scope;
 use Sentry\Transport\Result;
 use Sentry\Transport\ResultStatus;
+use Sentry\UserDataBag;
 use Spiral\Attributes\AttributeReader;
 use Temporal\Activity;
 use Temporal\Activity\ActivityInfo;
@@ -75,9 +78,20 @@ final class SentryActivityInboundInterceptorTest extends TestCase
         $client      = $hub->getClient() ?? throw new RuntimeException('Not Found client');
         $interceptor = new SentryActivityInboundInterceptor($hub, $client->getStacktraceBuilder());
         $input       = new ActivityInput(EncodedValues::empty(), Header::empty());
-        $handler     = static fn (ActivityInput $input): bool => true;
+        $handler     = static function (ActivityInput $input) use ($hub): bool {
+            $hub->configureScope(function (Scope $scope): Scope {
+                return $scope->setUser(new UserDataBag('test'));
+            });
+
+            return true;
+        };
 
         $result = $interceptor->handleActivityInbound($input, $handler);
+
+
+        $hub->configureScope(function (Scope $scope): void {
+            assertNull($scope->getUser());
+        });
 
         assertIsBool($result);
         assertTrue($result);
@@ -157,6 +171,10 @@ final class SentryActivityInboundInterceptorTest extends TestCase
 
                 assertArrayHasKey('TaskQueue', $context['Activity']);
                 assertEquals('Test', $context['Activity']['TaskQueue']);
+
+                assertNotNull($scope);
+                assertNotNull($scope->getUser());
+                assertEquals('test', $scope->getUser()->getId());
 
                 return null;
             }
@@ -241,13 +259,33 @@ final class SentryActivityInboundInterceptorTest extends TestCase
                 {
                     $this->context->heartbeat($details);
                 }
+
+                public function getInstance(): object
+                {
+                    return $this;
+                }
             },
         );
 
         $interceptor = new SentryActivityInboundInterceptor($hub, $client->getStacktraceBuilder());
         $input       = new ActivityInput(EncodedValues::empty(), Header::empty());
-        $handler     = static fn (ActivityInput $input): bool => throw $throwable;
+        $handler     = static function (ActivityInput $input) use ($throwable, $hub): bool {
 
-        $interceptor->handleActivityInbound($input, $handler);
+            $hub->configureScope(function (Scope $scope): Scope {
+                return $scope->setUser(new UserDataBag('test'));
+            });
+
+            throw $throwable;
+        };
+
+        try {
+            $interceptor->handleActivityInbound($input, $handler);
+        } catch (Throwable $e) {
+            $hub->configureScope(function (Scope $scope): void {
+                assertNull($scope->getUser());
+            });
+
+            throw $e;
+        }
     }
 }

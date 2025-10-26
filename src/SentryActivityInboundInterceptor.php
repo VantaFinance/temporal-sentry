@@ -37,8 +37,10 @@ final class SentryActivityInboundInterceptor implements ActivityInboundIntercept
      */
     public function handleActivityInbound(ActivityInput $input, callable $next): mixed
     {
+        $this->hub->pushScope();
+
         try {
-            $result = $next($input);
+            return $next($input);
         } catch (Throwable $e) {
             $stackTrace = $this->stacktraceBuilder->buildFromException($e);
 
@@ -71,8 +73,8 @@ final class SentryActivityInboundInterceptor implements ActivityInboundIntercept
             $this->hub->captureEvent($event, $eventHit);
 
             throw $e;
+        } finally {
+            $this->hub->popScope();
         }
-
-        return $result;
     }
 }
