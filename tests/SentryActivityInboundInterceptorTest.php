@@ -29,14 +29,10 @@ use function Sentry\init;
 use Sentry\Integration\IntegrationInterface;
 use Sentry\Options;
 use Sentry\SentrySdk;
-
 use Sentry\Serializer\RepresentationSerializer;
-
 use Sentry\Severity;
 use Sentry\StacktraceBuilder;
-
 use Sentry\State\Scope;
-
 use Sentry\Transport\Result;
 use Sentry\Transport\ResultStatus;
 use Spiral\Attributes\AttributeReader;

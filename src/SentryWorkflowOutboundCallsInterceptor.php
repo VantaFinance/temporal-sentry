@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Temporal Sentry
  *
@@ -33,32 +34,50 @@ final class SentryWorkflowOutboundCallsInterceptor implements WorkflowOutboundCa
     ) {
     }
 
-
     public function panic(PanicInput $input, callable $next): Promise
     {
+        $this->hub->pushScope();
+
         $failure = $input->failure;
 
-        if ($failure == null) {
+        try {
+            if ($failure == null) {
+                return $next($input);
+            }
+
+            $this->reportError($failure);
+
             return $next($input);
+        } catch (Throwable $e) {
+            $this->reportError($e);
+
+            throw $e;
+        } finally {
+            $this->hub->popScope();
         }
-
-        $this->reportError($failure);
-
-        return $next($input);
     }
-
 
     public function complete(CompleteInput $input, callable $next): Promise
     {
+        $this->hub->pushScope();
+
         $failure = $input->failure;
 
-        if ($failure == null) {
+        try {
+            if ($failure == null) {
+                return $next($input);
+            }
+
+            $this->reportError($failure);
+
             return $next($input);
+        } catch (Throwable $e) {
+            $this->reportError($e);
+
+            throw $e;
+        } finally {
+            $this->hub->popScope();
         }
-
-        $this->reportError($failure);
-
-        return $next($input);
     }
 
     private function reportError(Throwable $e): void
@@ -74,14 +93,7 @@ final class SentryWorkflowOutboundCallsInterceptor implements WorkflowOutboundCa
             'TaskQueue' => Workflow::getInfo()->taskQueue,
         ]);
 
-        $request = [];
-
-        foreach (Workflow::getInput()->getValues() as $value) {
-            $request[] = $value;
-        }
-
-        $event->setExtra(['Args' => $request]);
-
+        $event->setExtra(['Args' => Workflow::getInput()->toPayloads()->serializeToJsonString()]);
         $eventHit = EventHint::fromArray(['exception' => $e, 'stacktrace' => $stackTrace]);
 
         $this->hub->captureEvent($event, $eventHit);

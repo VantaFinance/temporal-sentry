@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Temporal Sentry
  *
@@ -13,7 +14,6 @@ namespace Vanta\Integration\Temporal\Sentry;
 use function iterator_to_array;
 
 use Sentry\Event;
-
 use Sentry\EventHint;
 use Sentry\ExceptionDataBag;
 use Sentry\StacktraceBuilder;

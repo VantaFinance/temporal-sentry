@@ -12,7 +12,6 @@ use function PHPUnit\Framework\assertIsBool;
 use function PHPUnit\Framework\assertTrue;
 
 use PHPUnit\Framework\Attributes\CoversClass;
-
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use React\Promise\PromiseInterface as Promise;
@@ -20,7 +19,6 @@ use React\Promise\PromiseInterface as Promise;
 use function React\Promise\resolve;
 
 use ReflectionException;
-
 use RuntimeException;
 use Sentry\ClientInterface as SentryClient;
 use Sentry\Event;
@@ -30,19 +28,13 @@ use Sentry\EventId;
 use function Sentry\init;
 
 use Sentry\Integration\IntegrationInterface;
-
 use Sentry\Options;
 use Sentry\SentrySdk;
 use Sentry\Serializer\RepresentationSerializer;
-
 use Sentry\Severity;
-
 use Sentry\StacktraceBuilder;
 use Sentry\State\Scope;
-
-
 use Sentry\Transport\Result;
-
 use Sentry\Transport\ResultStatus;
 use Spiral\Attributes\AttributeReader;
 use stdClass;
