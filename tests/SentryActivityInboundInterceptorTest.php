@@ -40,6 +40,7 @@ use Sentry\Transport\ResultStatus;
 use Sentry\UserDataBag;
 use Spiral\Attributes\AttributeReader;
 use Temporal\Activity;
+use Temporal\Activity\ActivityCancellationDetails;
 use Temporal\Activity\ActivityInfo;
 use Temporal\DataConverter\DataConverter;
 use Temporal\DataConverter\EncodedValues;
@@ -263,6 +264,16 @@ final class SentryActivityInboundInterceptorTest extends TestCase
                 public function getInstance(): object
                 {
                     return $this;
+                }
+
+                public function getLastHeartbeatDetails($type = null): mixed
+                {
+                    return null;
+                }
+
+                public function getCancellationDetails(): ?ActivityCancellationDetails
+                {
+                    return null;
                 }
             },
         );
