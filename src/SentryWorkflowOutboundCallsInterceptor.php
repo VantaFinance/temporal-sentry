@@ -34,6 +34,16 @@ final class SentryWorkflowOutboundCallsInterceptor implements WorkflowOutboundCa
     ) {
     }
 
+
+    /**
+     * @template T
+     *
+     * @param callable(PanicInput): Promise<T> $next
+     *
+     * @throws Throwable
+     *
+     * @return Promise<T>
+     */
     public function panic(PanicInput $input, callable $next): Promise
     {
         $this->hub->pushScope();
@@ -48,11 +58,25 @@ final class SentryWorkflowOutboundCallsInterceptor implements WorkflowOutboundCa
             $this->reportError($failure);
 
             return $next($input);
+        } catch (Throwable $e) {
+            $this->reportError($e);
+
+            throw $e;
         } finally {
             $this->hub->popScope();
         }
     }
 
+
+    /**
+     * @template T
+     *
+     * @param callable(CompleteInput): Promise<T> $next
+     *
+     * @throws Throwable
+     *
+     * @return Promise<T>
+     */
     public function complete(CompleteInput $input, callable $next): Promise
     {
         $this->hub->pushScope();
@@ -67,6 +91,10 @@ final class SentryWorkflowOutboundCallsInterceptor implements WorkflowOutboundCa
             $this->reportError($failure);
 
             return $next($input);
+        } catch (Throwable $e) {
+            $this->reportError($e);
+
+            throw $e;
         } finally {
             $this->hub->popScope();
         }
@@ -85,14 +113,7 @@ final class SentryWorkflowOutboundCallsInterceptor implements WorkflowOutboundCa
             'TaskQueue' => Workflow::getInfo()->taskQueue,
         ]);
 
-        $request = [];
-
-        foreach (Workflow::getInput()->getValues() as $value) {
-            $request[] = $value;
-        }
-
-        $event->setExtra(['Args' => $request]);
-
+        $event->setExtra(['Args' => Workflow::getInput()->toPayloads()->serializeToJsonString()]);
         $eventHit = EventHint::fromArray(['exception' => $e, 'stacktrace' => $stackTrace]);
 
         $this->hub->captureEvent($event, $eventHit);

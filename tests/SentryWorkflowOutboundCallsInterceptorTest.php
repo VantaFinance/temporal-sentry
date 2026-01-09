@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Vanta\Integration\Temporal\Sentry\Test;
 
 use Closure;
+use Internal\Destroy\Destroyable;
 
 use function PHPUnit\Framework\assertArrayHasKey;
 use function PHPUnit\Framework\assertEquals;
@@ -19,6 +20,7 @@ use React\Promise\PromiseInterface as Promise;
 
 use function React\Promise\resolve;
 
+use ReflectionClass;
 use ReflectionException;
 use RuntimeException;
 use Sentry\ClientInterface as SentryClient;
@@ -39,14 +41,18 @@ use Sentry\Transport\Result;
 use Sentry\Transport\ResultStatus;
 use Spiral\Attributes\AttributeReader;
 use stdClass;
+use Temporal\DataConverter\DataConverter;
 use Temporal\DataConverter\EncodedValues;
+use Temporal\DataConverter\JsonConverter;
 use Temporal\Exception\ExceptionInterceptor;
 use Temporal\Interceptor\SimplePipelineProvider;
 use Temporal\Interceptor\WorkflowOutboundCalls\CompleteInput;
 use Temporal\Interceptor\WorkflowOutboundCalls\PanicInput;
-use Temporal\Internal\Declaration\Destroyable;
 use Temporal\Internal\Declaration\MethodHandler;
 use Temporal\Internal\Declaration\Prototype\WorkflowPrototype;
+use Temporal\Internal\Declaration\WorkflowInstance\QueryDispatcher;
+use Temporal\Internal\Declaration\WorkflowInstance\SignalDispatcher;
+use Temporal\Internal\Declaration\WorkflowInstance\UpdateDispatcher;
 use Temporal\Internal\Declaration\WorkflowInstanceInterface as WorkflowInstance;
 use Temporal\Internal\Marshaller\Mapper\AttributeMapperFactory;
 use Temporal\Internal\Marshaller\Marshaller;
@@ -72,6 +78,9 @@ final class SentryWorkflowOutboundCallsInterceptorTest extends TestCase
         init(['dsn' => 'https://1a36864711324ed8a04ba0fa2c89ac5a@sentry.temporal.local/52']);
 
 
+        $args = EncodedValues::empty();
+        $args->setDataConverter(new DataConverter(new JsonConverter()));
+
         Workflow::setCurrentContext(
             new WorkflowContext(
                 ServiceContainer::fromWorkerFactory(
@@ -82,7 +91,7 @@ final class SentryWorkflowOutboundCallsInterceptorTest extends TestCase
                 ),
                 new Client(new ArrayQueue()),
                 new NullWorkflowInstance(),
-                new Input()
+                new Input(args: $args)
             )
         );
 
@@ -127,6 +136,9 @@ final class SentryWorkflowOutboundCallsInterceptorTest extends TestCase
             'WorkflowExecution' => ['ID' => 'f06e87b1-5e56-4c5d-a789-3f68a7a3af14', 'RunID' => '236a53db-3310-4e11-bd04-c13da5cf8f9d'],
         ], $workflowInfo);
 
+        $args = EncodedValues::fromValues([true, ['test' => 'test']]);
+        $args->setDataConverter(new DataConverter(new JsonConverter()));
+
         Workflow::setCurrentContext(
             new WorkflowContext(
                 ServiceContainer::fromWorkerFactory(
@@ -137,7 +149,7 @@ final class SentryWorkflowOutboundCallsInterceptorTest extends TestCase
                 ),
                 new Client(new ArrayQueue()),
                 new NullWorkflowInstance(),
-                new Input($workflowInfo, EncodedValues::fromValues([true, ['test' => 'test']]))
+                new Input($workflowInfo, $args)
             )
         );
 
@@ -183,7 +195,7 @@ final class SentryWorkflowOutboundCallsInterceptorTest extends TestCase
                 $context = $event->getContexts();
 
                 assertArrayHasKey('Args', $extra);
-                assertEquals([true, ['test' => 'test']], $extra['Args']);
+                assertEquals('{"payloads":[{"metadata":{"encoding":"anNvbi9wbGFpbg=="},"data":"dHJ1ZQ=="},{"metadata":{"encoding":"anNvbi9wbGFpbg=="},"data":"eyJ0ZXN0IjoidGVzdCJ9"}]}', $extra['Args']);
 
                 assertArrayHasKey('Workflow', $context);
 
@@ -321,5 +333,29 @@ final class NullWorkflowInstance implements WorkflowInstance, Destroyable
     public function setDynamicUpdateHandler(callable $handler, ?callable $validator = null): void
     {
         // TODO: Implement setDynamicUpdateHandler() method.
+    }
+
+    public function getQueryDispatcher(): QueryDispatcher
+    {
+        return new QueryDispatcher(
+            new WorkflowPrototype('test', null, new ReflectionClass(stdClass::class)),
+            new stdClass()
+        );
+    }
+
+    public function getSignalDispatcher(): SignalDispatcher
+    {
+        return new SignalDispatcher(
+            new WorkflowPrototype('test', null, new ReflectionClass(stdClass::class)),
+            new stdClass()
+        );
+    }
+
+    public function getUpdateDispatcher(): UpdateDispatcher
+    {
+        return new UpdateDispatcher(
+            new WorkflowPrototype('test', null, new ReflectionClass(stdClass::class)),
+            new stdClass()
+        );
     }
 }
