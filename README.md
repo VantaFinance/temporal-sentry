@@ -48,6 +48,3 @@ $worker = $factory->newWorker(
     ])
 );
 ```
-
-
-
